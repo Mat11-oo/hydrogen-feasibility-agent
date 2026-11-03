@@ -18,8 +18,6 @@ git clone https://github.com/Mat11-oo/hydrogen-feasibility-agent.git
 cd hydrogen-feasibility-agent
 ```
 
-私有仓库需要使用具有访问权限的 GitHub 账号。
-
 ## 启动后端
 
 在仓库根目录执行：
