@@ -26,3 +26,6 @@ coverage/
 *.png
 *.jpg
 *.jpeg
+
+# Allow only the repository usage README
+!/README.md
