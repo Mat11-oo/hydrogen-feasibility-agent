@@ -1,0 +1,28 @@
+# Secrets, environments and generated files
+.env
+.env.*
+!.env.example
+.venv/
+node_modules/
+.next/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.tsbuildinfo
+coverage/
+.DS_Store
+# Local business data
+/data/
+**/data/
+*.db
+*.db-*
+*.sqlite*
+# Code-only repository: exclude requirements, design and development documents
+/docs/
+**/docs/
+*.md
+*.pdf
+*.docx
+*.png
+*.jpg
+*.jpeg

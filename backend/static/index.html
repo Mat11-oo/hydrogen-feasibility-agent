@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>可研报告生成 · 验收界面（阶段 2-1）</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; margin: 0; background: #f5f6f8; color: #1f2328; }
+  header { background: #1f2937; color: #fff; padding: 12px 20px; display: flex; gap: 16px; align-items: center; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header nav button { background: transparent; color: #cbd5e1; border: 0; padding: 6px 10px; cursor: pointer; font-size: 14px; border-radius: 6px; }
+  header nav button.active, header nav button:hover { background: #374151; color: #fff; }
+  main { max-width: 860px; margin: 20px auto; padding: 0 16px; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 16px; }
+  .muted { color: #6b7280; font-size: 13px; }
+  .hidden { display: none; }
+  input, textarea, button { font-size: 14px; }
+  input[type=text], input[type=number], textarea { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 4px; }
+  .field { margin-bottom: 12px; }
+  .field label { font-size: 13px; color: #374151; }
+  button.primary { background: #2563eb; color: #fff; border: 0; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+  button.primary:disabled { background: #93c5fd; cursor: not-allowed; }
+  button.ghost { background: #fff; color: #374151; border: 1px solid #d1d5db; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+  .list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+  .list-item:last-child { border-bottom: 0; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+  .tag.available { background: #dcfce7; color: #166534; }
+  .tag.no_text { background: #fef9c3; color: #854d0e; }
+  .tag.failed { background: #fee2e2; color: #991b1b; }
+  .tag.outline_pending { background: #dbeafe; color: #1e40af; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #e5e7eb; padding: 6px 8px; font-size: 13px; text-align: left; vertical-align: top; }
+  th { background: #f9fafb; }
+  td input { border: 1px solid #e5e7eb; padding: 4px; width: 100%; border-radius: 4px; font-size: 13px; }
+  .total { margin-top: 10px; font-size: 14px; }
+  .total.over { color: #dc2626; font-weight: 600; }
+  .drop { border: 2px dashed #cbd5e1; border-radius: 8px; padding: 24px; text-align: center; color: #6b7280; cursor: pointer; }
+  .drop.dragover { border-color: #2563eb; background: #eff6ff; }
+  .msg { padding: 8px 12px; border-radius: 6px; margin: 8px 0; font-size: 13px; }
+  .msg.error { background: #fee2e2; color: #991b1b; }
+  .msg.ok { background: #dcfce7; color: #166534; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>可研报告生成 · 验收界面</h1>
+  <nav>
+    <button id="nav-docs" class="active" onclick="show('docs')">资料库</button>
+    <button id="nav-reports" onclick="show('reports')">报告列表</button>
+    <button id="nav-create" onclick="show('create')">创建报告</button>
+  </nav>
+</header>
+<main>
+  <div id="msg"></div>
+
+  <section id="sec-docs" class="card">
+    <h2>资料库</h2>
+    <div class="drop" id="drop">点击或拖入文件上传（PDF / Word / Markdown / TXT，单文件 ≤100M）</div>
+    <input type="file" id="file" multiple hidden>
+    <div id="doc-list"></div>
+  </section>
+
+  <section id="sec-reports" class="card hidden">
+    <h2>报告列表</h2>
+    <div id="report-list"></div>
+  </section>
+
+  <section id="sec-create" class="card hidden">
+    <h2>创建报告</h2>
+    <div class="field"><label>报告标题</label><input type="text" id="c-title" placeholder="如：攀枝花市钒钛高新区制氢加氢一体化示范项目"></div>
+    <div class="field"><label>目标字数（默认 12000，最多 18000）</label><input type="number" id="c-words" value="12000" min="1" max="18000"></div>
+    <div class="field"><label>补充要求（可空）</label><textarea id="c-req" rows="3"></textarea></div>
+    <button class="primary" onclick="createReport()">创建</button>
+  </section>
+
+  <section id="sec-outline" class="card hidden">
+    <div class="toolbar">
+      <h2 id="o-title" style="margin:0;flex:1">大纲</h2>
+      <button class="ghost" onclick="genOutline()" id="btn-gen">生成大纲</button>
+      <button class="ghost" onclick="show('reports')">返回</button>
+    </div>
+    <div id="o-table"></div>
+    <div class="total" id="o-total"></div>
+    <div class="toolbar" style="margin-top:10px">
+      <button class="ghost" onclick="addChapter()">加一章</button>
+    </div>
+  </section>
+</main>
+
+<script>
+let currentReport = null;
+let outline = null;
+
+function $(id){ return document.getElementById(id); }
+function msg(text, ok){
+  const m = $('msg'); m.className = 'msg ' + (ok ? 'ok' : 'error'); m.textContent = text;
+  setTimeout(()=>{ m.textContent=''; m.className=''; }, 4000);
+}
+function show(name){
+  ['docs','reports','create','outline'].forEach(s => $('sec-'+s).classList.add('hidden'));
+  ['nav-docs','nav-reports','nav-create'].forEach(n => $(n).classList.remove('active'));
+  $('sec-'+name).classList.remove('hidden');
+  if(name==='docs'){ $('nav-docs').classList.add('active'); loadDocs(); }
+  if(name==='reports'){ $('nav-reports').classList.add('active'); loadReports(); }
+  if(name==='create'){ $('nav-create').classList.add('active'); }
+}
+async function api(path, opts){
+  const r = await fetch(path, opts);
+  if(r.status === 204) return null;
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok){
+    const m = data.error && data.error.message ? data.error.message : ('请求失败 '+r.status);
+    throw new Error(m);
+  }
+  return data;
+}
+
+// 资料库
+const drop = $('drop'), fileInput = $('file');
+drop.onclick = ()=>fileInput.click();
+drop.ondragover = e=>{ e.preventDefault(); drop.classList.add('dragover'); };
+drop.ondragleave = ()=>drop.classList.remove('dragover');
+drop.ondrop = e=>{ e.preventDefault(); drop.classList.remove('dragover'); uploadFiles(e.dataTransfer.files); };
+fileInput.onchange = ()=>uploadFiles(fileInput.files);
+async function uploadFiles(files){
+  for(const f of files){
+    const fd = new FormData(); fd.append('file', f);
+    try { await api('/api/v1/documents', {method:'POST', body:fd}); msg('已上传：'+f.name, true); }
+    catch(e){ msg('上传失败：'+e.message, false); }
+  }
+  loadDocs();
+}
+async function loadDocs(){
+  try{
+    const docs = await api('/api/v1/documents');
+    const el = $('doc-list');
+    if(!docs.length){ el.innerHTML = '<p class="muted">还没有资料</p>'; return; }
+    el.innerHTML = docs.map(d=>{
+      const tag = d.status==='available' ? `<span class="tag available">可用（${d.chunk_count} 段）</span>`
+        : d.status==='no_text' ? '<span class="tag no_text">无文字，检索不到</span>'
+        : '<span class="tag failed">失败</span>';
+      const err = d.error_reason ? `<div class="muted">${d.error_reason}</div>` : '';
+      return `<div class="list-item"><div><strong>${escapeHtml(d.original_name)}</strong> <span class="muted">${d.file_type}</span>${err}</div>${tag}</div>`;
+    }).join('');
+  }catch(e){ msg('加载资料失败：'+e.message, false); }
+}
+
+// 报告
+async function loadReports(){
+  try{
+    const rs = await api('/api/v1/reports');
+    const el = $('report-list');
+    if(!rs.length){ el.innerHTML = '<p class="muted">还没有报告，去「创建报告」建一份</p>'; return; }
+    el.innerHTML = rs.map(r=>{
+      const statusMap = {outline_pending:'待确认大纲'};
+      const st = statusMap[r.status] || r.status;
+      return `<div class="list-item"><div style="cursor:pointer" onclick="openReport(${r.id})"><strong>${escapeHtml(r.title)}</strong><div class="muted">${new Date(r.created_at).toLocaleString()} · 目标 ${r.target_words} 字</div></div><span class="tag outline_pending">${st}</span></div>`;
+    }).join('');
+  }catch(e){ msg('加载报告失败：'+e.message, false); }
+}
+async function createReport(){
+  const title = $('c-title').value.trim();
+  const words = parseInt($('c-words').value, 10);
+  const req = $('c-req').value.trim();
+  if(!title){ msg('请填报告标题', false); return; }
+  if(words > 18000){ msg('目标字数最多 18000（全文不能超过 2 万字）', false); return; }
+  try{
+    const r = await api('/api/v1/reports', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, target_words:words, user_requirements:req})});
+    msg('报告已创建', true);
+    openReport(r.id);
+  }catch(e){ msg('创建失败：'+e.message, false); }
+}
+
+// 大纲
+async function openReport(id){
+  try{
+    const r = await api('/api/v1/reports/'+id);
+    currentReport = r; $('o-title').textContent = '大纲：'+r.title;
+    show('outline');
+    await loadOutline();
+  }catch(e){ msg(e.message, false); }
+}
+async function loadOutline(){
+  try{
+    outline = await api(`/api/v1/reports/${currentReport.id}/outline`);
+    renderOutline();
+  }catch(e){
+    // 还没生成过大纲
+    $('o-table').innerHTML = '<p class="muted">还没有大纲，点「生成大纲」</p>';
+    $('o-total').textContent = '';
+  }
+}
+function renderOutline(){
+  const chs = outline.chapters || [];
+  if(!chs.length){ $('o-table').innerHTML='<p class="muted">还没有大纲，点「生成大纲」</p>'; $('o-total').textContent=''; return; }
+  $('o-table').innerHTML = `<table>
+    <tr><th style="width:30px">#</th><th>章节标题</th><th>关键论点</th><th>所需数据</th><th style="width:80px">字数</th><th style="width:110px">操作</th></tr>
+    ${chs.map(c=>`
+      <tr data-id="${c.id}">
+        <td>${c.chapter_id}</td>
+        <td><input value="${escapeAttr(c.title)}" onchange="saveChapter(${c.id},'title',this.value)"></td>
+        <td><input value="${escapeAttr((c.key_points||[]).join('；'))}" onchange="saveChapter(${c.id},'key_points',this.value)"></td>
+        <td><input value="${escapeAttr((c.data_needed||[]).join('；'))}" onchange="saveChapter(${c.id},'data_needed',this.value)"></td>
+        <td><input type="number" value="${c.suggested_words}" onchange="saveChapter(${c.id},'suggested_words',parseInt(this.value,10))"></td>
+        <td><button class="ghost" onclick="moveChapter(${c.id},'up')">↑</button> <button class="ghost" onclick="moveChapter(${c.id},'down')">↓</button> <button class="ghost" onclick="delChapter(${c.id})">删</button></td>
+      </tr>`).join('')}
+  </table>`;
+  const total = outline.total_words;
+  const el = $('o-total');
+  el.textContent = `字数合计：${total} / 目标 ${outline.target_words}`;
+  el.className = 'total' + (total > 18000 ? ' over' : '');
+}
+async function genOutline(){
+  $('btn-gen').disabled = true; $('btn-gen').textContent = '生成中…';
+  try{
+    outline = await api(`/api/v1/reports/${currentReport.id}/outline`, {method:'POST'});
+    msg('大纲已生成', true); renderOutline();
+  }catch(e){ msg('生成大纲失败：'+e.message, false); }
+  finally{ $('btn-gen').disabled = false; $('btn-gen').textContent = '生成大纲'; }
+}
+async function saveChapter(id, field, value){
+  const body = {};
+  if(field==='key_points'){ body.key_points = String(value).split(/[；;]/).map(s=>s.trim()).filter(Boolean); }
+  else if(field==='data_needed'){ body.data_needed = String(value).split(/[；;]/).map(s=>s.trim()).filter(Boolean); }
+  else if(field==='suggested_words'){ body.suggested_words = value; }
+  else { body[field] = value; }
+  try{
+    await api(`/api/v1/reports/${currentReport.id}/outline/chapters/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    await refreshOutline();
+  }catch(e){ msg('保存失败：'+e.message, false); }
+}
+async function addChapter(){
+  try{
+    await api(`/api/v1/reports/${currentReport.id}/outline/chapters`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:'新章节', key_points:[], data_needed:[], suggested_words:0})});
+    await refreshOutline();
+  }catch(e){ msg('加章节失败：'+e.message, false); }
+}
+async function delChapter(id){
+  try{ await api(`/api/v1/reports/${currentReport.id}/outline/chapters/${id}`, {method:'DELETE'}); await refreshOutline(); }
+  catch(e){ msg('删除失败：'+e.message, false); }
+}
+async function moveChapter(id, dir){
+  try{
+    outline = await api(`/api/v1/reports/${currentReport.id}/outline/chapters/${id}/move?direction=${dir}`, {method:'POST'});
+    renderOutline();
+  }catch(e){ msg('移动失败：'+e.message, false); }
+}
+async function refreshOutline(){
+  outline = await api(`/api/v1/reports/${currentReport.id}/outline`);
+  renderOutline();
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+show('docs');
+</script>
+</body>
+</html>
