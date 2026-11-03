@@ -9,13 +9,7 @@
 - 正式前端的上传、创建与大纲编辑入口目前显示功能说明，尚未接入操作。可使用后端临时验收界面或 API 体验已有后端能力。
 - 全文生成、审计、重写、正文编辑和 Word 导出尚未实现。
 
-当前仅供本地单人使用，尚未接入登录和用户权限隔离。
-
-## 环境
-
-- Python 3.12；下文的 `python3` 需指向该版本。
-- Node.js 24、npm 11 为已验证的前端运行环境。
-- DeepSeek API Key：仅生成大纲时需要；离线测试不调用真实模型。
+尚未接入登录和用户权限隔离。
 
 ## 获取代码
 
@@ -40,12 +34,12 @@ cp backend/.env.example backend/.env
 
 ```bash
 cd backend
-.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+.venv/bin/python -m uvicorn app.main:app --port 8000
 ```
 
-- 后端 API：<http://127.0.0.1:8000/api/v1/reports>
-- 临时验收界面：<http://127.0.0.1:8000>
-- 接口文档：<http://127.0.0.1:8000/docs>
+- 报告列表 API：`GET /api/v1/reports`
+- 临时验收界面：`/`
+- 接口文档：`/docs`
 
 ## 启动前端
 
@@ -58,16 +52,14 @@ cp .env.example .env.local
 npm run dev
 ```
 
-打开 <http://127.0.0.1:3000>。前端服务端从 `.env.local` 读取 `BACKEND_URL`，默认指向本地 8000 端口；前端无需配置模型密钥。
+前端服务端从 `.env.local` 读取 `BACKEND_URL`，请配置为实际后端服务地址；前端无需配置模型密钥。
 
-生产构建与本地预览：
+生产构建与启动：
 
 ```bash
 npm run build
 npm run start
 ```
-
-开发服务与生产预览均使用 3000 端口，请勿同时启动。
 
 ## 测试与检查
 
@@ -94,7 +86,7 @@ npm run build
 backend/.venv/bin/python scripts/smoke.py hydrogen-feasibility-agent 阶段3-1
 ```
 
-该脚本在临时数据库中验证后端大纲生成、保存与回读，不修改本地业务数据；运行记录生成在本地 `docs/evidence/`，不会提交到仓库。它不表示正式前端已接通大纲生成功能。
+该脚本在隔离的临时数据库中验证后端大纲生成、保存与回读；运行记录生成在 `docs/evidence/`，不会提交到仓库。它不表示正式前端已接通大纲生成功能。
 
 ## 数据与目录
 
@@ -106,6 +98,6 @@ frontend/          正式前端源码、测试和依赖锁文件
 scripts/           模型冒烟与重启恢复脚本
 ```
 
-本地数据库与上传文件默认保存在 `data/`。仓库排除真实环境文件、业务数据、虚拟环境、依赖目录和构建产物，仅保留无密钥的 `.env.example`。
+数据库与上传文件默认保存在 `data/`。仓库排除真实环境文件、业务数据、虚拟环境、依赖目录和构建产物，仅保留无密钥的 `.env.example`。
 
 本仓库仅包含项目代码及本 README，不包含需求文档、开发文档、设计参考和验收截图。
